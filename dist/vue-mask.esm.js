@@ -302,6 +302,18 @@ function maskFactory(fn) {
       var mask = fn(el, binding, vnode);
 
       var model = null;
+      var updateModelValue = function (val) {
+        if (!model) {
+          return;
+        }
+
+        var obj = vnode.context;
+        var str = model.expression.split('.');
+        while (str.length > 1) {
+          obj = obj[str.shift()];
+        }
+        return obj[str.shift()] = val;
+      };
 
       var formatter = mask.pattern ? new stringMask(mask.pattern, mask.options || {}) : null;
       var clean = getCleaner(mask.clearValue);
@@ -323,12 +335,8 @@ function maskFactory(fn) {
         }
 
         var value = clean(target.value);
-
         target.value = format({value: value, formatter: formatter});
-
-        if (model) {
-          vnode.context[model.expression] = target.value;
-        }
+        updateModelValue(target.value);
       };
 
       if (vnode.tag === 'input') {
