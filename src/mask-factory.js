@@ -1,4 +1,5 @@
 import StringMask from "string-mask";
+import {filterAlphanumeric, filterLetters, filterNumbers, getImputElement} from "./helpers";
 
 function maskFactory(fn) {
   const getCleaner = clearValue => {
@@ -8,13 +9,13 @@ function maskFactory(fn) {
 
     switch (clearValue) {
       case 'number':
-        return v => v.replace(/\D/g, '');
+        return filterNumbers;
         break;
-      case 'alpha':
-        return v => v.replace(/[^a-zA-Z]/g, '');
+      case 'letter':
+        return filterLetters;
         break;
       default:
-        return v => v.replace(/[^a-zA-Z0-9]/g, '');
+        return filterAlphanumeric;
     }
   };
 
@@ -40,9 +41,9 @@ function maskFactory(fn) {
       const clean = getCleaner(mask.clearValue);
 
       const format = mask.format || (({value, formatter}) => {
-        value = formatter.apply(value);
-        return value.trim().replace(/[^0-9]$/, '');
-      });
+          value = formatter.apply(value);
+          return value.trim().replace(/[^0-9]$/, '');
+        });
 
       const handler = event => {
         const {target, type} = event;
@@ -54,6 +55,7 @@ function maskFactory(fn) {
         const value = clean(target.value);
         target.value = format({value, formatter});
         updateModelValue(target.value);
+        target.dataset.previousValue = target.value;
       };
 
       if (vnode.tag === 'input') {
@@ -71,6 +73,13 @@ function maskFactory(fn) {
       el.addEventListener('blur', e => handler(e), false);
 
       handler({target: el, type: null});
+    },
+    update (el, {}, vnode) {
+      el = getImputElement(el, vnode);
+      const previousValue = el.dataset.previousValue || '';
+      if (previousValue !== el.value) {
+        el.dispatchEvent(new Event('input'));
+      }
     }
   }
 }

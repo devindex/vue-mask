@@ -54,6 +54,24 @@
     data () {
       return {
         mask: {
+          generic: '',
+          date: '',
+          decimal: 0,
+          number: 0,
+          phone: '',
+          cpf: '',
+          cnpj: '',
+          cep: '',
+          cc: ''
+        }
+      }
+    },
+    mounted () {
+      this.defaultValues();
+    },
+    methods: {
+      defaultValues () {
+        this.mask = {
           generic: '527407f42b4fa278',
           date: '31/03/2017',
           decimal: 987654321,
