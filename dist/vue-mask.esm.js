@@ -1,18 +1,27 @@
 /**
-  * di-vue-mask v1.0.0
+  * di-vue-mask v1.0.1
   * (c) 2017 Sergio Rodrigues
   * @license MIT
   */
+function getImputElement(el, vnode) {
+  return vnode.tag === 'input' ? el : el.querySelector('input');
+}
+
 var model = {
   bind: function bind(el, ref, vnode) {
     var value = ref.value;
 
-    if (vnode.tag !== 'input') {
-      // find input element in the component
-      el = el.querySelector('input');
-    }
-
+    el = getImputElement(el, vnode);
     el.value = value;
+  },
+  update: function update(el, ref, vnode) {
+    var value = ref.value;
+    var oldValue = ref.oldValue;
+
+    if (value !== oldValue) {
+      el = getImputElement(el, vnode);
+      el.value = value;
+    }
   }
 };
 
@@ -279,6 +288,16 @@ var stringMask = createCommonjsModule(function (module, exports) {
 }));
 });
 
+var getImputElement$1 = function (el, vnode) {
+  return vnode.tag === 'input' ? el : el.querySelector('input');
+};
+
+var filterNumbers = function (v) { return v.replace(/\D/g, ''); };
+
+var filterLetters = function (v) { return v.replace(/[^a-zA-Z]/g, ''); };
+
+var filterAlphanumeric = function (v) { return v.replace(/[^a-zA-Z0-9]/g, ''); };
+
 function maskFactory(fn) {
   var getCleaner = function (clearValue) {
     if (typeof clearValue === 'function') {
@@ -287,13 +306,13 @@ function maskFactory(fn) {
 
     switch (clearValue) {
       case 'number':
-        return function (v) { return v.replace(/\D/g, ''); };
+        return filterNumbers;
         break;
-      case 'alpha':
-        return function (v) { return v.replace(/[^a-zA-Z]/g, ''); };
+      case 'letter':
+        return filterLetters;
         break;
       default:
-        return function (v) { return v.replace(/[^a-zA-Z0-9]/g, ''); };
+        return filterAlphanumeric;
     }
   };
 
@@ -319,12 +338,12 @@ function maskFactory(fn) {
       var clean = getCleaner(mask.clearValue);
 
       var format = mask.format || (function (ref) {
-        var value = ref.value;
-        var formatter = ref.formatter;
+          var value = ref.value;
+          var formatter = ref.formatter;
 
-        value = formatter.apply(value);
-        return value.trim().replace(/[^0-9]$/, '');
-      });
+          value = formatter.apply(value);
+          return value.trim().replace(/[^0-9]$/, '');
+        });
 
       var handler = function (event) {
         var target = event.target;
@@ -337,6 +356,7 @@ function maskFactory(fn) {
         var value = clean(target.value);
         target.value = format({value: value, formatter: formatter});
         updateModelValue(target.value);
+        target.dataset.previousValue = target.value;
       };
 
       if (vnode.tag === 'input') {
@@ -354,6 +374,13 @@ function maskFactory(fn) {
       el.addEventListener('blur', function (e) { return handler(e); }, false);
 
       handler({target: el, type: null});
+    },
+    update: function update (el, ref, vnode) {
+      el = getImputElement$1(el, vnode);
+      var previousValue = el.dataset.previousValue || '';
+      if (previousValue !== el.value) {
+        el.dispatchEvent(new Event('input'));
+      }
     }
   }
 }
