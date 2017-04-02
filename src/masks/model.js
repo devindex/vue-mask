@@ -1,10 +1,16 @@
+function getImputElement(el, vnode) {
+  return vnode.tag === 'input' ? el : el.querySelector('input');
+}
+
 export default {
   bind(el, {value}, vnode) {
-    if (vnode.tag !== 'input') {
-      // find input element in the component
-      el = el.querySelector('input');
-    }
-
+    el = getImputElement(el, vnode);
     el.value = value;
+  },
+  update(el, {value, oldValue}, vnode) {
+    if (value !== oldValue) {
+      el = getImputElement(el, vnode);
+      el.value = value;
+    }
   }
 }
