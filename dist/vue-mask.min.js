@@ -1,5 +1,5 @@
 /**
-  * di-vue-mask v1.0.1
+  * di-vue-mask v1.0.2
   * (c) 2017 Sergio Rodrigues
   * @license MIT
   */

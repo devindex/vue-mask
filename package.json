@@ -1,6 +1,6 @@
 {
   "name": "di-vue-mask",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Vue Mask Plugin",
   "main": "dist/vue-mask.common.js",
   "module": "dist/vue-mask.esm.js",
