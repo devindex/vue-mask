@@ -1,5 +1,5 @@
 /**
-  * di-vue-mask v1.0.2
+  * di-vue-mask v1.0.3
   * (c) 2017 Sergio Rodrigues
   * @license MIT
   */
@@ -360,9 +360,11 @@ function maskFactory(fn) {
         }
 
         var value = clean(target.value);
-        target.value = format({value: value, formatter: formatter});
-        updateModelValue(target.value);
-        target.dataset.previousValue = target.value;
+        value = format({value: value, formatter: formatter});
+
+        _Vue.nextTick(function () { return target.value = value; });
+        updateModelValue(value);
+        target.dataset.previousValue = value;
       };
 
       if (vnode.tag === 'input') {
