@@ -1,4 +1,5 @@
 import StringMask from "string-mask";
+import {_Vue as Vue} from "./install";
 import {filterAlphanumeric, filterLetters, filterNumbers, getImputElement} from "./helpers";
 
 function maskFactory(fn) {
@@ -52,10 +53,12 @@ function maskFactory(fn) {
           target.value = '';
         }
 
-        const value = clean(target.value);
-        target.value = format({value, formatter});
-        updateModelValue(target.value);
-        target.dataset.previousValue = target.value;
+        let value = clean(target.value);
+        value = format({value, formatter});
+
+        Vue.nextTick(() => target.value = value);
+        updateModelValue(value);
+        target.dataset.previousValue = value;
       };
 
       if (vnode.tag === 'input') {
