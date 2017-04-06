@@ -1,88 +1,55 @@
 import StringMask from "string-mask";
 import {_Vue as Vue} from "./install";
-import {filterAlphanumeric, filterLetters, filterNumbers, getImputElement} from "./helpers";
+import {getCleaner, getInputElement} from "./helpers";
 
-function maskFactory(fn) {
-  const getCleaner = clearValue => {
-    if (typeof clearValue === 'function') {
-      return clearValue;
+function createHandler({clean, format, formatter}) {
+  return ({target, type, isTrusted}) => {
+    if (type === 'paste') {
+      target.value = '';
     }
 
-    switch (clearValue) {
-      case 'number':
-        return filterNumbers;
-        break;
-      case 'letter':
-        return filterLetters;
-        break;
-      default:
-        return filterAlphanumeric;
-    }
-  };
+    let value = clean(target.value);
+    target.value = format({value, formatter});
+    target.dataset.value = target.value;
 
+    if (type === 'mask' || isTrusted) {
+      target.dispatchEvent(new Event('input'));
+    }
+  }
+}
+
+function defaultFormat({value, formatter}) {
+  value = formatter.apply(value);
+  return value.trim().replace(/[^0-9]$/, '');
+}
+
+function maskFactory(bind) {
   return {
     bind(el, binding, vnode) {
-      const mask = fn(el, binding, vnode);
+      const mask = bind(el, binding, vnode);
 
-      let model = null;
-      const updateModelValue = val => {
-        if (!model) {
-          return;
-        }
-
-        let obj = vnode.context;
-        let str = model.expression.split('.');
-        while (str.length > 1) {
-          obj = obj[str.shift()];
-        }
-        return obj[str.shift()] = val;
-      };
-
-      const formatter = mask.pattern ? new StringMask(mask.pattern, mask.options || {}) : null;
       const clean = getCleaner(mask.clearValue);
+      const format = mask.format || defaultFormat;
+      const formatter = mask.pattern ? new StringMask(mask.pattern, mask.options || {}) : null;
+      const handler = createHandler({clean, format, formatter});
 
-      const format = mask.format || (({value, formatter}) => {
-          value = formatter.apply(value);
-          return value.trim().replace(/[^0-9]$/, '');
-        });
+      el = getInputElement(el, vnode);
 
-      const handler = event => {
-        const {target, type} = event;
+      el.addEventListener('input', handler, false);
+      el.addEventListener('paste', handler, false);
+      el.addEventListener('blur', handler, false);
+      el.addEventListener('mask', handler, false);
 
-        if (type === 'paste') {
-          target.value = '';
-        }
-
-        let value = clean(target.value);
-        value = format({value, formatter});
-
-        Vue.nextTick(() => target.value = value);
-        updateModelValue(value);
-        target.dataset.previousValue = value;
-      };
-
-      if (vnode.tag === 'input') {
-        // remove original event listener (v-model)
-        el.removeEventListener('input', vnode.data.on['input']);
-        model = vnode.data.directives.find(o => o.name === 'model');
-      } else {
-        // find input element in the component
-        el = el.querySelector('input');
-        model = vnode.data.directives.find(o => o.name === 'mask-model');
-      }
-
-      el.addEventListener('input', e => handler(e), false);
-      el.addEventListener('paste', e => handler(e), false);
-      el.addEventListener('blur', e => handler(e), false);
-
-      handler({target: el, type: null});
+      handler({target: el, type: 'mask'});
     },
     update (el, {}, vnode) {
-      el = getImputElement(el, vnode);
-      const previousValue = el.dataset.previousValue || '';
-      if (previousValue !== el.value) {
-        el.dispatchEvent(new Event('input'));
-      }
+      el = getInputElement(el, vnode);
+      Vue.nextTick(() => {
+        const previousValue = el.dataset.value || '';
+        if (previousValue !== el.value) {
+          el.dispatchEvent(new Event('mask'));
+        }
+      });
     }
   }
 }

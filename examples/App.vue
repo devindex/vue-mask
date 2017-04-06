@@ -2,9 +2,9 @@
   <div>
     <h1>Vue Mask</h1>
 
-    <div class="field" v-mask-model="mask.generic" v-mask="'AAAA-AAAA-AAAA-AAAA'">
+    <div class="field">
       <label>Generic <span>[ {{ mask.generic }} ]</span></label>
-      <input type="text" name="generic">
+      <input type="text" name="generic" v-model="mask.generic" v-mask="'AAAA-AAAA-AAAA-AAAA'">
     </div>
 
     <div class="field">
