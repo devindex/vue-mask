@@ -25,7 +25,7 @@ Basic usage on HTML input element
 <input type="text" name="mask" v-model="mask" v-mask="'0000-0000'">
 ```
 
-For custom components we need use the `v-mask-model` instead `v-model`
+For custom components without `v-model` we can use `v-mask-model`
 
 ```html
 <my-input v-mask-model="mask" v-mask="'0000-0000'"></my-input>
