@@ -1,30 +1,8 @@
 /**
-  * di-vue-mask v1.0.3
+  * di-vue-mask v1.1.0
   * (c) 2017 Sergio Rodrigues
   * @license MIT
   */
-function getImputElement(el, vnode) {
-  return vnode.tag === 'input' ? el : el.querySelector('input');
-}
-
-var model = {
-  bind: function bind(el, ref, vnode) {
-    var value = ref.value;
-
-    el = getImputElement(el, vnode);
-    el.value = value;
-  },
-  update: function update(el, ref, vnode) {
-    var value = ref.value;
-    var oldValue = ref.oldValue;
-
-    if (value !== oldValue) {
-      el = getImputElement(el, vnode);
-      el.value = value;
-    }
-  }
-};
-
 var commonjsGlobal = typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
 
 
@@ -288,8 +266,8 @@ var stringMask = createCommonjsModule(function (module, exports) {
 }));
 });
 
-var getImputElement$1 = function (el, vnode) {
-  return vnode.tag === 'input' ? el : el.querySelector('input');
+var getInputElement = function (el, vnode) {
+  return vnode.tag === 'input' ? el : el.querySelector('input:not([readonly])');
 };
 
 var filterNumbers = function (v) { return v.replace(/\D/g, ''); };
@@ -298,91 +276,82 @@ var filterLetters = function (v) { return v.replace(/[^a-zA-Z]/g, ''); };
 
 var filterAlphanumeric = function (v) { return v.replace(/[^a-zA-Z0-9]/g, ''); };
 
-function maskFactory(fn) {
-  var getCleaner = function (clearValue) {
-    if (typeof clearValue === 'function') {
-      return clearValue;
+var getCleaner = function (clearValue) {
+  if (typeof clearValue === 'function') {
+    return clearValue;
+  }
+
+  switch (clearValue) {
+    case 'number':
+      return filterNumbers;
+      break;
+    case 'letter':
+      return filterLetters;
+      break;
+    default:
+      return filterAlphanumeric;
+  }
+};
+
+function createHandler(ref) {
+  var clean = ref.clean;
+  var format = ref.format;
+  var formatter = ref.formatter;
+
+  return function (ref) {
+    var target = ref.target;
+    var type = ref.type;
+    var isTrusted = ref.isTrusted;
+
+    if (type === 'paste') {
+      target.value = '';
     }
 
-    switch (clearValue) {
-      case 'number':
-        return filterNumbers;
-        break;
-      case 'letter':
-        return filterLetters;
-        break;
-      default:
-        return filterAlphanumeric;
-    }
-  };
+    var value = clean(target.value);
+    target.value = format({value: value, formatter: formatter});
+    target.dataset.value = target.value;
 
+    if (type === 'mask' || isTrusted) {
+      target.dispatchEvent(new Event('input'));
+    }
+  }
+}
+
+function defaultFormat(ref) {
+  var value = ref.value;
+  var formatter = ref.formatter;
+
+  value = formatter.apply(value);
+  return value.trim().replace(/[^0-9]$/, '');
+}
+
+function maskFactory(bind) {
   return {
-    bind: function bind(el, binding, vnode) {
-      var mask = fn(el, binding, vnode);
+    bind: function bind$1(el, binding, vnode) {
+      var mask = bind(el, binding, vnode);
 
-      var model = null;
-      var updateModelValue = function (val) {
-        if (!model) {
-          return;
-        }
-
-        var obj = vnode.context;
-        var str = model.expression.split('.');
-        while (str.length > 1) {
-          obj = obj[str.shift()];
-        }
-        return obj[str.shift()] = val;
-      };
-
-      var formatter = mask.pattern ? new stringMask(mask.pattern, mask.options || {}) : null;
       var clean = getCleaner(mask.clearValue);
+      var format = mask.format || defaultFormat;
+      var formatter = mask.pattern ? new stringMask(mask.pattern, mask.options || {}) : null;
+      var handler = createHandler({clean: clean, format: format, formatter: formatter});
 
-      var format = mask.format || (function (ref) {
-          var value = ref.value;
-          var formatter = ref.formatter;
+      el = getInputElement(el, vnode);
 
-          value = formatter.apply(value);
-          return value.trim().replace(/[^0-9]$/, '');
-        });
+      el.addEventListener('input', handler, false);
+      el.addEventListener('paste', handler, false);
+      el.addEventListener('blur', handler, false);
+      el.addEventListener('mask', handler, false);
 
-      var handler = function (event) {
-        var target = event.target;
-        var type = event.type;
-
-        if (type === 'paste') {
-          target.value = '';
-        }
-
-        var value = clean(target.value);
-        value = format({value: value, formatter: formatter});
-
-        _Vue.nextTick(function () { return target.value = value; });
-        updateModelValue(value);
-        target.dataset.previousValue = value;
-      };
-
-      if (vnode.tag === 'input') {
-        // remove original event listener (v-model)
-        el.removeEventListener('input', vnode.data.on['input']);
-        model = vnode.data.directives.find(function (o) { return o.name === 'model'; });
-      } else {
-        // find input element in the component
-        el = el.querySelector('input');
-        model = vnode.data.directives.find(function (o) { return o.name === 'mask-model'; });
-      }
-
-      el.addEventListener('input', function (e) { return handler(e); }, false);
-      el.addEventListener('paste', function (e) { return handler(e); }, false);
-      el.addEventListener('blur', function (e) { return handler(e); }, false);
-
-      handler({target: el, type: null});
+      handler({target: el, type: 'mask'});
     },
     update: function update (el, ref, vnode) {
-      el = getImputElement$1(el, vnode);
-      var previousValue = el.dataset.previousValue || '';
-      if (previousValue !== el.value) {
-        el.dispatchEvent(new Event('input'));
-      }
+      el = getInputElement(el, vnode);
+      _Vue.nextTick(function () {
+        var previousValue = el.dataset.value || '';
+        if (previousValue !== el.value) {
+          el.dispatchEvent(new Event('mask'));
+        }
+      });
     }
   }
 }
@@ -540,6 +509,43 @@ var cc = maskFactory(function () {
   }
 });
 
+var model = {
+  bind: function bind(el, ref, vnode) {
+    var value = ref.value;
+    var expression = ref.expression;
+
+    el = getInputElement(el, vnode);
+
+    var expressionParts = expression.replace(/\[(\d+)]/, '.$1').split('.');
+
+    var updateModelValue = function (val) {
+      var obj = vnode.context;
+      var parts = expressionParts.slice(0);
+      while (parts.length > 1) {
+        obj = obj[parts.shift()];
+      }
+      return obj[parts.shift()] = val;
+    };
+
+    el.addEventListener('input', function (ref) {
+      var target = ref.target;
+
+      return updateModelValue(target.value);
+    }, false);
+
+    el.value = value;
+  },
+  update: function update(el, ref, vnode) {
+    var value = ref.value;
+    var oldValue = ref.oldValue;
+
+    if (value !== oldValue) {
+      el = getInputElement(el, vnode);
+      el.value = value;
+    }
+  }
+};
+
 var _Vue;
 
 function install(Vue) {
@@ -549,7 +555,6 @@ function install(Vue) {
 
   _Vue = Vue;
 
-  Vue.directive('maskModel', model);
   Vue.directive('mask', mask);
   Vue.directive('maskDate', date);
   Vue.directive('maskPhone', phone);
@@ -559,6 +564,7 @@ function install(Vue) {
   Vue.directive('maskCnpj', cnpj);
   Vue.directive('maskCep', cep);
   Vue.directive('maskCc', cc);
+  Vue.directive('maskModel', model);
 
   install.installed = true;
 }
