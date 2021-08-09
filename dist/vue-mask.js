@@ -1,6 +1,6 @@
 /**
-  * di-vue-mask v1.1.0
-  * (c) 2017 Sergio Rodrigues
+  * di-vue-mask v1.2.0
+  * (c) 2021 Sergio Rodrigues
   * @license MIT
   */
 (function (global, factory) {
@@ -272,109 +272,108 @@ var stringMask = createCommonjsModule(function (module, exports) {
 }));
 });
 
-var getInputElement = function (el, vnode) {
-  return vnode.tag === 'input' ? el : el.querySelector('input:not([readonly])');
-};
+var getInputElement = function (el) {
+  var inputEl =  el.tagName.toLowerCase() !== 'input'
+    ? el.querySelector('input:not([readonly])')
+    : el;
 
-var filterNumbers = function (v) { return v.replace(/\D/g, ''); };
-
-var filterLetters = function (v) { return v.replace(/[^a-zA-Z]/g, ''); };
-
-var filterAlphanumeric = function (v) { return v.replace(/[^a-zA-Z0-9]/g, ''); };
-
-var getCleaner = function (clearValue) {
-  if (typeof clearValue === 'function') {
-    return clearValue;
+  if (!inputEl) {
+    throw new Error('Mask directive requires at least one input');
   }
 
-  switch (clearValue) {
-    case 'number':
+  return inputEl;
+};
+
+function createEvent(name) {
+  var event = document.createEvent('Event');
+  event.initEvent(name, true, true);
+  return event;
+}
+
+var filterNumbers = function (v) { return (
+  v.replace(/\D/g, '')
+); };
+
+var filterLetters = function (v) { return (
+  v.replace(/[^a-zA-Z]/g, '')
+); };
+
+var filterAlphanumeric = function (v) { return (
+  v.replace(/[^a-zA-Z0-9]/g, '')
+); };
+
+var parsePreFn = function (arg) {
+  if (typeof arg === 'function') {
+    return arg;
+  }
+
+  switch (arg) {
+    case 'filter-number':
       return filterNumbers;
-      break;
-    case 'letter':
+    case 'filter-letter':
       return filterLetters;
-      break;
     default:
       return filterAlphanumeric;
   }
 };
 
-function createHandler(ref) {
-  var clean = ref.clean;
-  var format = ref.format;
-  var formatter = ref.formatter;
+var parsePostFn = function (arg) {
+  if (typeof arg === 'function') {
+    return arg;
+  }
 
-  return function (ref) {
-    var target = ref.target;
-    var type = ref.type;
-    var isTrusted = ref.isTrusted;
+  return function (value) { return (
+    value.trim().replace(/[^0-9]$/, '')
+  ); };
+};
 
-    if (type === 'paste') {
-      target.value = '';
-    }
+var delimiter = '\u00a7';
 
-    var value = clean(target.value);
-    target.value = format({value: value, formatter: formatter});
-    target.dataset.value = target.value;
+function masker(fn) {
+  return function (args) {
+    var data = fn(args);
 
-    if (type === 'mask' || isTrusted) {
-      target.dispatchEvent(new Event('input'));
+    var pre = parsePreFn('pre' in data ? data.pre : null);
+    var post = parsePostFn('post' in data ? data.post : null);
+
+    var formatter = 'pattern' in data && data.pattern
+      ? new stringMask(data.pattern, data.options || {})
+      : null;
+
+    var handler = 'handler' in data && typeof data.handler === 'function'
+      ? data.handler
+      : function (value) { return (formatter ? formatter.apply(value) : value); };
+
+    return function (str, args) {
+      if ( args === void 0 ) args = {};
+
+      args = Object.assign(args, { delimiter: delimiter });
+
+      str = pre(str, args);
+
+      var ref = (
+        !str.includes(delimiter) ? ("" + delimiter + str) : str
+      ).split(delimiter);
+      var prefix = ref[0];
+      var value = ref[1];
+
+      value = handler(value, args);
+
+      return post(("" + prefix + value), args);
     }
   }
 }
 
-function defaultFormat(ref) {
-  var value = ref.value;
-  var formatter = ref.formatter;
+var mask = masker(function (ref) {
+  var pattern = ref.value;
 
-  value = formatter.apply(value);
-  return value.trim().replace(/[^0-9]$/, '');
-}
-
-function maskFactory(bind) {
-  return {
-    bind: function bind$1(el, binding, vnode) {
-      var mask = bind(el, binding, vnode);
-
-      var clean = getCleaner(mask.clearValue);
-      var format = mask.format || defaultFormat;
-      var formatter = mask.pattern ? new stringMask(mask.pattern, mask.options || {}) : null;
-      var handler = createHandler({clean: clean, format: format, formatter: formatter});
-
-      el = getInputElement(el, vnode);
-
-      el.addEventListener('input', handler, false);
-      el.addEventListener('paste', handler, false);
-      el.addEventListener('blur', handler, false);
-      el.addEventListener('mask', handler, false);
-
-      handler({target: el, type: 'mask'});
-    },
-    update: function update (el, ref, vnode) {
-      el = getInputElement(el, vnode);
-      _Vue.nextTick(function () {
-        var previousValue = el.dataset.value || '';
-        if (previousValue !== el.value) {
-          el.dispatchEvent(new Event('mask'));
-        }
-      });
-    }
-  }
-}
-
-var mask = maskFactory(function (el, ref) {
-  var value = ref.value;
-
-  return {
-    pattern: value,
-    format: function format(ref) {
-      var value = ref.value;
-      var formatter = ref.formatter;
-
-      value = formatter.apply(value);
-      return value.trim().replace(/[^a-zA-Z0-9]$/, '');
-    }
-  }
+  return ({
+  pattern: pattern,
+  pre: filterAlphanumeric,
+  post: function (value) { return (
+    value.trim().replace(/[^a-zA-Z0-9]$/, '')
+  ); },
+});
 });
 
 var patterns = {
@@ -382,138 +381,120 @@ var patterns = {
   br: '00/00/0000'
 };
 
-var date = maskFactory(function (el, ref) {
-  var arg = ref.arg;
-  var modifiers = ref.modifiers;
+var date = masker(function (ref) {
+  if ( ref === void 0 ) ref = {};
+  var locale = ref.locale; if ( locale === void 0 ) locale = null;
 
-  var key = arg || Object.keys(modifiers)[0] || 'us';
-  var pattern = patterns[key];
-
-  return {
-    pattern: pattern,
-    clearValue: 'number'
-  }
+  return ({
+  pattern: patterns[locale || 'us'],
+  pre: filterNumbers,
+});
 });
 
-var formatters = {
+var handlers = {
   get us() {
     var phone = new stringMask('(000) 000-0000');
-
-    return {
-      format: function format(value) {
-        return phone.apply(value);
-      }
-    }
+    return function (value) { return phone.apply(value); };
   },
   get br() {
     var phone = new stringMask('(00) 0000-0000');
     var phone9 = new stringMask('(00) 9 0000-0000');
     var phone0800 = new stringMask('0000-000-0000');
 
-    return {
-      format: function format(value) {
-        if (value.indexOf('0800') === 0) {
-          value = phone0800.apply(value);
-        } else if (value.length <= 10) {
-          value = phone.apply(value);
-        } else {
-          value = phone9.apply(value);
-        }
-        return value;
+    return function (value) {
+      if (value.startsWith('0800'.slice(0, value.length))) {
+        return phone0800.apply(value);
+      } else if (value.length <= 10) {
+        return phone.apply(value);
       }
+      return phone9.apply(value);
     }
   }
 };
 
-var phone = maskFactory(function (el, ref) {
-  var arg = ref.arg;
-  var modifiers = ref.modifiers;
+var phone = masker(function (ref) {
+  var locale = ref.locale;
 
-  var key = arg || Object.keys(modifiers)[0] || 'us';
-  var formatter = formatters[key];
+  var handler = handlers[locale || 'us'];
 
   return {
-    clearValue: 'number',
-    format: function format(ref) {
-      var value = ref.value;
-
-      value = formatter.format(value);
-      return value.trim().replace(/[^0-9]$/, '');
-    }
-  }
+    pre: filterNumbers,
+    handler: handler,
+  };
 });
 
 var config = {
-  us: {thousand: ',', decimal: '.'},
-  br: {thousand: '.', decimal: ','}
+  us: { thousand: ',', decimal: '.' },
+  br: { thousand: '.', decimal: ',' }
 };
 
-var decimal = maskFactory(function (el, ref) {
+var decimal = masker(function (ref) {
+  var locale = ref.locale;
   var value = ref.value;
-  var arg = ref.arg;
-  var modifiers = ref.modifiers;
 
-  var key = arg || Object.keys(modifiers)[0] || 'us';
-  var conf = config[key];
+  var conf = config[locale || 'us'];
 
-  var pattern = "#" + (conf.thousand) + "##0";
+  var patternParts = [("#" + (conf.thousand) + "##0")];
+  var precision = value || 0;
 
-  if (value && value > 0) {
-    pattern += conf.decimal;
-    while (value > 0) {
-      pattern += '0';
-      value--;
-    }
+  if (precision) {
+    patternParts.push(
+      conf.decimal,
+      new Array(value).fill('0').join('')
+    );
   }
 
   return {
-    pattern: pattern,
-    options: {reverse: true},
-    clearValue: 'number',
-    format: function format(ref) {
-      var value = ref.value;
-      var formatter = ref.formatter;
+    pattern: patternParts.join(''),
+    options: { reverse: true },
+    pre: function pre(value, ref) {
+      var delimiter = ref.delimiter;
 
-      return formatter.apply(Number(value));
-    }
-  }
+      if (!value) {
+        return '';
+      }
+
+      var sign = value.startsWith('-') ? '-' : '';
+
+      var ref$1 = value.split(conf.decimal).map(filterNumbers);
+      var number = ref$1[0];
+      var fraction = ref$1[1]; if ( fraction === void 0 ) fraction = '';
+
+      return [sign, delimiter, Number(number), fraction].join('');
+    },
+    post: function post(value) {
+      return value;
+    },
+  };
 });
 
-var number = maskFactory(function () {
+var number = masker(function () {
   return {
     pattern: '#0',
-    options: {reverse: true},
-    clearValue: 'number'
+    options: { reverse: true },
+    pre: filterNumbers
   }
 });
 
-var cpf = maskFactory(function () {
-  return {
-    pattern: '000.000.000-00',
-    clearValue: 'number'
-  }
-});
+var cpf = masker(function () { return ({
+  pattern: '000.000.000-00',
+  pre: filterNumbers,
+}); });
 
-var cnpj = maskFactory(function () {
-  return {
-    pattern: '00.000.000/0000-00',
-    clearValue: 'number'
-  }
-});
+var cnpj = masker(function () { return ({
+  pattern: '00.000.000/0000-00',
+  pre: filterNumbers,
+}); });
 
-var cep = maskFactory(function () {
-  return {
-    pattern: '00.000-000',
-    clearValue: 'number'
-  }
-});
+var cep = masker(function () { return ({
+  pattern: '00.000-000',
+  pre: filterNumbers,
+}); });
 
-var cc = maskFactory(function () {
-  return {
-    pattern: '0000 0000 0000 0000',
-    clearValue: 'number'
-  }
-});
+var cc = masker(function () { return ({
+  pattern: '0000 0000 0000 0000',
+  pre: filterNumbers,
+}); });
 
 var model = {
   bind: function bind(el, ref, vnode) {
@@ -552,6 +533,74 @@ var model = {
   }
 };
 
+function updater(el, masker) {
+  var currentValue = el.value;
+  var newValue = masker(currentValue, { el: el });
+
+  if (newValue !== currentValue) {
+    // Get current cursor position
+    var position = el.selectionEnd;
+
+    // Find next cursor position
+    if (position === currentValue.length) {
+      position = newValue.length;
+    } else if (position > 0 && position <= newValue.length) {
+      var digit = currentValue.charAt(position - 1);
+
+      if (digit !== newValue.charAt(position - 1)) {
+        if (digit === newValue.charAt(position)) {
+          position += 1;
+        } else if (digit === newValue.charAt(position - 2)) {
+          position -= 1;
+        }
+      }
+    }
+
+    el.value = newValue;
+
+    if (el === document.activeElement) {
+      // Restore cursor position
+      el.setSelectionRange(position, position);
+    }
+
+    el.dispatchEvent(createEvent('input'));
+  }
+}
+
+function make(maskerFn) {
+  var masker;
+  var inputEl;
+
+  return {
+    bind: function bind(el, binding) {
+      masker = maskerFn({
+        value: binding.value,
+        locale: binding.arg || Object.keys(binding.modifiers)[0] || null,
+      });
+
+      inputEl = getInputElement(el);
+
+      // const handler = ({ type, isTrusted }) => {
+      //   if (type === 'mask' || isTrusted) {
+      //     updater(inputEl, masker);
+      //   }
+      // };
+
+      // el.addEventListener('input', handler, false);
+      // el.addEventListener('paste', handler, false);
+      // el.addEventListener('blur', handler, false);
+      // el.addEventListener('mask', handler, false);
+
+      updater(inputEl, masker);
+    },
+    update: function update() {
+      _Vue.nextTick(function () {
+        updater(inputEl, masker);
+      });
+    }
+  };
+}
+
 var _Vue;
 
 function install(Vue) {
@@ -561,24 +610,24 @@ function install(Vue) {
 
   _Vue = Vue;
 
-  Vue.directive('mask', mask);
-  Vue.directive('maskDate', date);
-  Vue.directive('maskPhone', phone);
-  Vue.directive('maskDecimal', decimal);
-  Vue.directive('maskNumber', number);
-  Vue.directive('maskCpf', cpf);
-  Vue.directive('maskCnpj', cnpj);
-  Vue.directive('maskCep', cep);
-  Vue.directive('maskCc', cc);
+  Vue.directive('mask', make(mask));
+  Vue.directive('maskDate', make(date));
+  Vue.directive('maskPhone', make(phone));
+  Vue.directive('maskDecimal', make(decimal));
+  Vue.directive('maskNumber', make(number));
+  Vue.directive('maskCpf', make(cpf));
+  Vue.directive('maskCnpj', make(cnpj));
+  Vue.directive('maskCep', make(cep));
+  Vue.directive('maskCc', make(cc));
   Vue.directive('maskModel', model);
 
   install.installed = true;
 }
 
-var index = {install: install};
+var index = { install: install };
 
 if (typeof window !== 'undefined' && window.Vue) {
-  window.Vue.use({install: install});
+  window.Vue.use({ install: install });
 }
 
 return index;
