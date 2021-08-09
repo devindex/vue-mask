@@ -5,30 +5,34 @@ Input mask lib for Vue.js based on [String-Mask](https://github.com/the-darc/str
 
 ## Installation
 
-This version only works in Vue 2.
+This version only works in Vue 3.
 
-  `npm i di-vue-mask -S`
+```bash
+# npm
+$ npm i -S @devindex/vue-mask
+
+# yarn
+$ yarn add @devindex/vue-mask
+```
 
 ## Usage
 
 ```javascript
-import Vue from 'vue'
-import VueMask from 'di-vue-mask'
+import { createApp } from 'vue';
+import VueMask from '@devindex/vue-mask'; // <-- ADD THIS LINE
+import App from './App.vue';
 
-/** Activate vue.js plugins **/
-Vue.use(VueMask);
+const app = createApp(App);
+
+app.use(VueMask);  // <-- ADD THIS LINE
+
+app.mount('#app');
 ```
 
 Basic usage on HTML input element
 
 ```html
 <input type="text" name="mask" v-model="mask" v-mask="'0000-0000'">
-```
-
-For custom components without `v-model` we can use `v-mask-model`
-
-```html
-<my-input v-mask-model="mask" v-mask="'0000-0000'"></my-input>
 ```
 
 ## Available masks

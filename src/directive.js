@@ -1,5 +1,4 @@
 import { getInputElement, createEvent } from './helpers';
-import { _Vue as Vue } from './install';
 
 function updater(el, masker) {
   const currentValue = el.value;
@@ -14,7 +13,12 @@ function updater(el, masker) {
       position = newValue.length;
     } else if (position > 0 && position <= newValue.length) {
       const digit = currentValue.charAt(position - 1);
-
+      // while(
+      //   position < newValue.length
+      //   && newValue.charAt(position - 1) !== digit
+      //   ) {
+      //   position++;
+      // }
       if (digit !== newValue.charAt(position - 1)) {
         if (digit === newValue.charAt(position)) {
           position += 1;
@@ -40,7 +44,7 @@ export default function make(maskerFn) {
   let inputEl;
 
   return {
-    bind(el, binding) {
+    beforeMount(el, binding) {
       masker = maskerFn({
         value: binding.value,
         locale: binding.arg || Object.keys(binding.modifiers)[0] || null,
@@ -48,23 +52,14 @@ export default function make(maskerFn) {
 
       inputEl = getInputElement(el);
 
-      // const handler = ({ type, isTrusted }) => {
-      //   if (type === 'mask' || isTrusted) {
-      //     updater(inputEl, masker);
+      // inputEl.oninput = ({ isTrusted, inputType = null }) => {
+      //   if (isTrusted) {
+      //     updater(el, masker);
       //   }
       // };
-
-      // el.addEventListener('input', handler, false);
-      // el.addEventListener('paste', handler, false);
-      // el.addEventListener('blur', handler, false);
-      // el.addEventListener('mask', handler, false);
-
+    },
+    updated() {
       updater(inputEl, masker);
     },
-    update() {
-      Vue.nextTick(() => {
-        updater(inputEl, masker);
-      });
-    }
-  };
-};
+  }
+}

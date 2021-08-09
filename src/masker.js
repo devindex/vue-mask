@@ -19,7 +19,7 @@ export default function masker(fn) {
       : (value) => (formatter ? formatter.apply(value) : value);
 
     return (str, args = {}) => {
-      args = Object.assign(args, { delimiter });
+      args = { ...args, delimiter };
 
       str = pre(str, args);
 
