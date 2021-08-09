@@ -1,30 +1,40 @@
-import maskFactory from "../mask-factory";
+import masker from '../masker';
+import { filterNumbers } from '../helpers';
 
 const config = {
-  us: {thousand: ',', decimal: '.'},
-  br: {thousand: '.', decimal: ','}
+  us: { thousand: ',', decimal: '.' },
+  br: { thousand: '.', decimal: ',' }
 };
 
-export default maskFactory((el, {value, arg, modifiers}) => {
-  const key = arg || Object.keys(modifiers)[0] || 'us';
-  const conf = config[key];
+export default masker(({ locale, value }) => {
+  const conf = config[locale || 'us'];
 
-  let pattern = `#${conf.thousand}##0`;
+  const patternParts = [`#${conf.thousand}##0`];
+  const precision = value || 0;
 
-  if (value && value > 0) {
-    pattern += conf.decimal;
-    while (value > 0) {
-      pattern += '0';
-      value--;
-    }
+  if (precision) {
+    patternParts.push(
+      conf.decimal,
+      new Array(value).fill('0').join('')
+    );
   }
 
   return {
-    pattern,
-    options: {reverse: true},
-    clearValue: 'number',
-    format({value, formatter}) {
-      return formatter.apply(Number(value));
-    }
-  }
+    pattern: patternParts.join(''),
+    options: { reverse: true },
+    pre(value, { delimiter }) {
+      if (!value) {
+        return '';
+      }
+
+      const sign = value.startsWith('-') ? '-' : '';
+
+      const [number, fraction = ''] = value.split(conf.decimal).map(filterNumbers);
+
+      return [sign, delimiter, Number(number), fraction].join('');
+    },
+    post(value) {
+      return value;
+    },
+  };
 });
