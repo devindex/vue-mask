@@ -1,7 +1,7 @@
-import {getInputElement} from '../helpers';
+import { getInputElement } from '../helpers';
 
 export default {
-  bind(el, {value, expression}, vnode) {
+  bind(el, { value, expression }, vnode) {
     el = getInputElement(el, vnode);
 
     const expressionParts = expression.replace(/\[(\d+)]/, '.$1').split('.');
@@ -15,11 +15,11 @@ export default {
       return obj[parts.shift()] = val;
     };
 
-    el.addEventListener('input', ({target}) => updateModelValue(target.value), false);
+    el.addEventListener('input', ({ target }) => updateModelValue(target.value), false);
 
     el.value = value;
   },
-  update(el, {value, oldValue}, vnode) {
+  update(el, { value, oldValue }, vnode) {
     if (value !== oldValue) {
       el = getInputElement(el, vnode);
       el.value = value;

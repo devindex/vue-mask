@@ -1,11 +1,10 @@
-import maskFactory from '../mask-factory';
+import masker from '../masker';
+import { filterAlphanumeric } from '../helpers';
 
-export default maskFactory((el, {value}) => {
-  return {
-    pattern: value,
-    format({value, formatter}) {
-      value = formatter.apply(value);
-      return value.trim().replace(/[^a-zA-Z0-9]$/, '');
-    }
-  }
-});
+export default masker(({ value: pattern }) => ({
+  pattern,
+  pre: filterAlphanumeric,
+  post: (value) => (
+    value.trim().replace(/[^a-zA-Z0-9]$/, '')
+  ),
+}));

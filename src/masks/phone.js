@@ -1,45 +1,33 @@
-import StringMask from "string-mask";
-import maskFactory from "../mask-factory";
+import StringMask from 'string-mask';
+import masker from '../masker';
+import { filterNumbers } from '../helpers';
 
-const formatters = {
+const handlers = {
   get us() {
     const phone = new StringMask('(000) 000-0000');
-
-    return {
-      format(value) {
-        return phone.apply(value);
-      }
-    }
+    return (value) => phone.apply(value);
   },
   get br() {
     const phone = new StringMask('(00) 0000-0000');
     const phone9 = new StringMask('(00) 9 0000-0000');
     const phone0800 = new StringMask('0000-000-0000');
 
-    return {
-      format(value) {
-        if (value.indexOf('0800') === 0) {
-          value = phone0800.apply(value);
-        } else if (value.length <= 10) {
-          value = phone.apply(value);
-        } else {
-          value = phone9.apply(value);
-        }
-        return value;
+    return (value) => {
+      if (value.startsWith('0800'.slice(0, value.length))) {
+        return phone0800.apply(value);
+      } else if (value.length <= 10) {
+        return phone.apply(value);
       }
+      return phone9.apply(value);
     }
   }
 };
 
-export default maskFactory((el, {arg, modifiers}) => {
-  const key = arg || Object.keys(modifiers)[0] || 'us';
-  const formatter = formatters[key];
+export default masker(({ locale }) => {
+  const handler = handlers[locale || 'us'];
 
   return {
-    clearValue: 'number',
-    format({value}) {
-      value = formatter.format(value);
-      return value.trim().replace(/[^0-9]$/, '');
-    }
-  }
+    pre: filterNumbers,
+    handler,
+  };
 });

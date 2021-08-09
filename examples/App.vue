@@ -3,6 +3,11 @@
     <h1>Vue Mask</h1>
 
     <div class="field">
+      <button @click="resetValues">Empty values</button>
+      <button @click="setValues">Default values</button>
+    </div>
+
+    <div class="field">
       <label>Generic <span>[ {{ mask.generic }} ]</span></label>
       <input type="text" name="generic" v-model="mask.generic" v-mask="'AAAA-AAAA-AAAA-AAAA'">
     </div>
@@ -53,36 +58,40 @@
   export default {
     data () {
       return {
-        mask: {
+        mask: this.blankData(),
+      };
+    },
+    mounted () {
+      this.setValues();
+    },
+    methods: {
+      resetValues() {
+        this.mask = this.blankData();
+      },
+      setValues () {
+        this.mask.generic = '527407f42b4fa278';
+        this.mask.date = '31/03/2017';
+        this.mask.decimal = 987654321;
+        this.mask.number = 9876543210;
+        this.mask.phone = '41987654321';
+        this.mask.cpf = '38558724903';
+        this.mask.cnpj = '24168633000171';
+        this.mask.cep = '80010170';
+        this.mask.cc = '4539416887805240';
+      },
+      blankData() {
+        return {
           generic: '',
           date: '',
-          decimal: 0,
-          number: 0,
+          decimal: '',
+          number: '',
           phone: '',
           cpf: '',
           cnpj: '',
           cep: '',
           cc: ''
-        }
-      }
-    },
-    mounted () {
-      this.defaultValues();
-    },
-    methods: {
-      defaultValues () {
-        this.mask = {
-          generic: '527407f42b4fa278',
-          date: '31/03/2017',
-          decimal: 987654321,
-          number: 9876543210,
-          phone: '41988887777',
-          cpf: '38558724903',
-          cnpj: '24168633000171',
-          cep: '80010170',
-          cc: '4539416887805240'
-        }
-      }
+        };
+      },
     }
   }
 </script>

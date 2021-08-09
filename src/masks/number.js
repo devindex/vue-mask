@@ -1,9 +1,10 @@
-import maskFactory from "../mask-factory";
+import masker from '../masker';
+import { filterNumbers } from '../helpers';
 
-export default maskFactory(() => {
+export default masker(() => {
   return {
     pattern: '#0',
-    options: {reverse: true},
-    clearValue: 'number'
+    options: { reverse: true },
+    pre: filterNumbers
   }
 });

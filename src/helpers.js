@@ -1,26 +1,54 @@
-export const getInputElement = (el, vnode) => {
-  return vnode.tag === 'input' ? el : el.querySelector('input:not([readonly])');
-};
+export const getInputElement = (el) => {
+  const inputEl =  el.tagName.toLowerCase() !== 'input'
+    ? el.querySelector('input:not([readonly])')
+    : el;
 
-export const filterNumbers = v => v.replace(/\D/g, '');
-
-export const filterLetters = v => v.replace(/[^a-zA-Z]/g, '');
-
-export const filterAlphanumeric = v => v.replace(/[^a-zA-Z0-9]/g, '');
-
-export const getCleaner = clearValue => {
-  if (typeof clearValue === 'function') {
-    return clearValue;
+  if (!inputEl) {
+    throw new Error('Mask directive requires at least one input');
   }
 
-  switch (clearValue) {
-    case 'number':
+  return inputEl;
+};
+
+export function createEvent(name) {
+  const event = document.createEvent('Event');
+  event.initEvent(name, true, true);
+  return event;
+}
+
+export const filterNumbers = (v) => (
+  v.replace(/\D/g, '')
+);
+
+export const filterLetters = (v) => (
+  v.replace(/[^a-zA-Z]/g, '')
+);
+
+export const filterAlphanumeric = (v) => (
+  v.replace(/[^a-zA-Z0-9]/g, '')
+);
+
+export const parsePreFn = (arg) => {
+  if (typeof arg === 'function') {
+    return arg;
+  }
+
+  switch (arg) {
+    case 'filter-number':
       return filterNumbers;
-      break;
-    case 'letter':
+    case 'filter-letter':
       return filterLetters;
-      break;
     default:
       return filterAlphanumeric;
   }
+};
+
+export const parsePostFn = (arg) => {
+  if (typeof arg === 'function') {
+    return arg;
+  }
+
+  return (value) => (
+    value.trim().replace(/[^0-9]$/, '')
+  );
 };
