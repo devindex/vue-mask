@@ -58,6 +58,9 @@ export default function make(maskerFn) {
       //   }
       // };
     },
+    mounted() {
+      updater(inputEl, masker);
+    },
     updated() {
       updater(inputEl, masker);
     },
