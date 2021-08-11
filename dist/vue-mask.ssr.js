@@ -615,6 +615,9 @@ function make(maskerFn) {
       //   }
       // };
     },
+    mounted: function mounted() {
+      updater(inputEl, masker);
+    },
     updated: function updated() {
       updater(inputEl, masker);
     }
@@ -624,6 +627,5 @@ function make(maskerFn) {
   for (var name in masks) {
     app.directive(name, make(masks[name]));
   }
-}; // Create module definition for Vue.use()
-// iife/cjs usage extends esm default export - so import it all
+};// iife/cjs usage extends esm default export - so import it all
 module.exports=install;

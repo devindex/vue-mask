@@ -511,6 +511,10 @@ function make(maskerFn) {
       // };
     },
 
+    mounted() {
+      updater(inputEl, masker);
+    },
+
     updated() {
       updater(inputEl, masker);
     }
@@ -523,6 +527,6 @@ const install = function installPlugin(app) {
   for (const name in masks) {
     app.directive(name, make(masks[name]));
   }
-}; // Create module definition for Vue.use()
+};
 
-export { install as default };
+export { install as default, filterAlphanumeric, filterLetters, filterNumbers, make as makeDirective, masker };
