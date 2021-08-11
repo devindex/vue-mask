@@ -9,5 +9,9 @@ const install = function installPlugin(app) {
   }
 };
 
+export { default as masker } from '@/masker';
+export { default as makeDirective } from '@/directive';
+export { filterNumbers, filterAlphanumeric, filterLetters } from '@/helpers';
+
 // Create module definition for Vue.use()
 export default install;
