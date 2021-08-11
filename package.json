@@ -1,6 +1,6 @@
 {
   "name": "@devindex/vue-mask",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Mask Plugin for Vue 3",
   "author": "Sergio Rodrigues",
   "main": "dist/vue-mask.ssr.js",
