@@ -11,7 +11,7 @@ export const getInputElement = (el) => {
 };
 
 export function createEvent(name) {
-  const event = document.createEvent('Event');
+  const event = document.createEvent('HTMLEvents');
   event.initEvent(name, true, true);
   return event;
 }
