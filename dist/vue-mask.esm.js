@@ -1,5 +1,5 @@
 /**
-  * di-vue-mask v1.2.0
+  * di-vue-mask v1.2.1
   * (c) 2021 Sergio Rodrigues
   * @license MIT
   */
@@ -279,7 +279,7 @@ var getInputElement = function (el) {
 };
 
 function createEvent(name) {
-  var event = document.createEvent('Event');
+  var event = document.createEvent('HTMLEvents');
   event.initEvent(name, true, true);
   return event;
 }
@@ -434,7 +434,7 @@ var decimal = masker(function (ref) {
   if (precision) {
     patternParts.push(
       conf.decimal,
-      new Array(value).fill('0').join('')
+      new Array(precision).fill('0').join('')
     );
   }
 
@@ -453,6 +453,11 @@ var decimal = masker(function (ref) {
       var ref$1 = value.split(conf.decimal).map(filterNumbers);
       var number = ref$1[0];
       var fraction = ref$1[1]; if ( fraction === void 0 ) fraction = '';
+
+      if (fraction && fraction.length > precision) {
+        number = "" + number + (fraction.slice(0, -precision));
+        fraction = fraction.slice(-precision);
+      }
 
       return [sign, delimiter, Number(number), fraction].join('');
     },
@@ -529,69 +534,87 @@ var model = {
 
 function updater(el, masker) {
   var currentValue = el.value;
+  var oldValue = el.dataset.value;
+
+  if (oldValue === currentValue) {
+    return;
+  }
+
   var newValue = masker(currentValue, { el: el });
 
-  if (newValue !== currentValue) {
-    // Get current cursor position
-    var position = el.selectionEnd;
+  if (newValue === currentValue) {
+    el.dataset.value = currentValue;
+    return;
+  }
 
-    // Find next cursor position
-    if (position === currentValue.length) {
-      position = newValue.length;
-    } else if (position > 0 && position <= newValue.length) {
-      var digit = currentValue.charAt(position - 1);
+  // Get current cursor position
+  var position = el.selectionEnd;
 
-      if (digit !== newValue.charAt(position - 1)) {
-        if (digit === newValue.charAt(position)) {
-          position += 1;
-        } else if (digit === newValue.charAt(position - 2)) {
-          position -= 1;
-        }
+  // Find next cursor position
+  if (position === currentValue.length) {
+    position = newValue.length;
+  } else if (position > 0 && position <= newValue.length) {
+    var digit = currentValue.charAt(position - 1);
+
+    if (digit !== newValue.charAt(position - 1)) {
+      if (digit === newValue.charAt(position)) {
+        position += 1;
+      } else if (digit === newValue.charAt(position - 2)) {
+        position -= 1;
       }
     }
-
-    el.value = newValue;
-
-    if (el === document.activeElement) {
-      // Restore cursor position
-      el.setSelectionRange(position, position);
-    }
-
-    el.dispatchEvent(createEvent('input'));
   }
+
+  el.value = newValue;
+  el.dataset.value = newValue;
+
+  if (el === document.activeElement) {
+    // Restore cursor position
+    el.setSelectionRange(position, position);
+  }
+
+  el.dispatchEvent(createEvent('input'));
 }
 
 function make(maskerFn) {
-  var masker;
-  var inputEl;
+  var maskerMap = new WeakMap();
+  var inputMap = new WeakMap();
+  var eventMap = new WeakMap();
 
   return {
-    bind: function bind(el, binding) {
-      masker = maskerFn({
+    bind: function (el, binding) {
+      var masker = maskerFn({
         value: binding.value,
         locale: binding.arg || Object.keys(binding.modifiers)[0] || null,
       });
 
-      inputEl = getInputElement(el);
+      var inputEl = getInputElement(el);
 
-      // const handler = ({ type, isTrusted }) => {
-      //   if (type === 'mask' || isTrusted) {
-      //     updater(inputEl, masker);
-      //   }
-      // };
+      var eventHandler = function (ref) {
+        var isTrusted = ref.isTrusted;
 
-      // el.addEventListener('input', handler, false);
-      // el.addEventListener('paste', handler, false);
-      // el.addEventListener('blur', handler, false);
-      // el.addEventListener('mask', handler, false);
+        if (isTrusted) {
+          updater(inputEl, masker);
+        }
+      };
+
+      maskerMap.set(el, masker);
+      inputMap.set(el, inputEl);
+      eventMap.set(el, eventHandler);
+
+      inputEl.addEventListener('input', eventHandler);
 
       updater(inputEl, masker);
     },
-    update: function update() {
-      _Vue.nextTick(function () {
-        updater(inputEl, masker);
-      });
-    }
+    componentUpdated: function componentUpdated(el) {
+      updater(inputMap.get(el), maskerMap.get(el));
+    },
+    unbind: function unbind(el) {
+      el.removeEventListener('input', inputMap.get(el));
+      maskerMap.delete(el);
+      inputMap.delete(el);
+      eventMap.delete(el);
+    },
   };
 }
 
