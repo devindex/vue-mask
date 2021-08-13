@@ -11,9 +11,10 @@
     </div>
 
     <div class="form-group">
-      <label class="form-label" for="generic">Mask</label>
+      <label class="form-label" for="mask-1">Mask <span class="mask">[ AAAA-AAAA-AAAA-AAAA ]</span></label>
       <div class="input-group">
-        <input class="form-input" type="text" id="generic"
+        <input class="form-input" type="text" id="mask-1"
+               @blur="eventHandler"
                v-model="mask.generic" v-mask="'AAAA-AAAA-AAAA-AAAA'">
         <span class="input-group-addon">{{ mask.generic }}</span>
       </div>
@@ -21,10 +22,25 @@
     </div>
 
     <div class="form-group">
+      <label class="form-label" for="mask-2">Mask <span class="mask">[ 00:00:00 ]</span></label>
+      <div class="input-group">
+        <input class="form-input" type="text" id="mask-2"
+               @blur="eventHandler"
+               v-model="mask.generic2" v-mask="'00:00:00'">
+        <span class="input-group-addon">{{ mask.generic2 }}</span>
+      </div>
+      <input-code directive="v-mask" value="'00:00:00'"></input-code>
+    </div>
+
+    <div class="form-group">
       <label class="form-label" for="date">Date</label>
       <div class="input-group">
         <input class="form-input" type="text" id="date"
+               @blur="eventHandler"
                v-model="mask.date" v-mask-date.br>
+        <button class="btn input-group-btn btn-action btn-primary" @click="setToday">
+          <i class="icon icon-refresh"></i>
+        </button>
         <span class="input-group-addon">{{ mask.date }}</span>
       </div>
       <input-code directive="v-mask-date.br"></input-code>
@@ -54,6 +70,7 @@
       <label class="form-label" for="phone">Phone</label>
       <div class="input-group">
         <input class="form-input" type="text" id="phone"
+               @blur="eventHandler"
                v-model="mask.phone" v-mask-phone.br>
         <span class="input-group-addon">{{ mask.phone }}</span>
       </div>
@@ -115,6 +132,16 @@ export default {
     };
   },
   methods: {
+    eventHandler() {
+      //
+    },
+    setToday() {
+      this.mask.date = new Date().toISOString()
+        .substring(0, 10)
+        .split('-')
+        .reverse()
+        .join('-');
+    },
     clearValues() {
       this.mask = this.emptyData();
     },
@@ -124,7 +151,8 @@ export default {
     sampleValues() {
       return {
         generic: '527407f42b4fa278',
-        date: '31/03/2017',
+        generic2: '235959',
+        date: '13082021',
         decimal: '987654321',
         number: '9876543210',
         phone: '41987654321',
@@ -137,6 +165,7 @@ export default {
     emptyData() {
       return {
         generic: '',
+        generic2: '',
         date: '',
         decimal: '',
         number: '',
@@ -156,11 +185,16 @@ export default {
   margin-top: 2rem;
   margin-bottom: 2rem;
 }
+.doc-page .form-label .mask {
+  color: #66758c;
+  font-size: .6rem;
+  margin-left: 0.2rem;
+}
 .doc-page .badge[data-badge]::after {
   margin-left: 0.4rem;
 }
 .doc-page .input-group-addon {
-  color: #aaa;
+  color: #bcc3ce;
   min-width: 35%;
   text-align: right;
 }
