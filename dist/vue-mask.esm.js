@@ -263,7 +263,7 @@ const getInputElement = el => {
   return inputEl;
 };
 function createEvent(name) {
-  const event = document.createEvent('Event');
+  const event = document.createEvent('HTMLEvents');
   event.initEvent(name, true, true);
   return event;
 }
@@ -384,7 +384,7 @@ var decimal = masker(({
   const precision = value || 0;
 
   if (precision) {
-    patternParts.push(conf.decimal, new Array(value).fill('0').join(''));
+    patternParts.push(conf.decimal, new Array(precision).fill('0').join(''));
   }
 
   return {
@@ -401,7 +401,13 @@ var decimal = masker(({
       }
 
       const sign = value.startsWith('-') ? '-' : '';
-      const [number, fraction = ''] = value.split(conf.decimal).map(filterNumbers);
+      let [number, fraction = ''] = value.split(conf.decimal).map(filterNumbers);
+
+      if (fraction && fraction.length > precision) {
+        number = `${number}${fraction.slice(0, -precision)}`;
+        fraction = fraction.slice(-precision);
+      }
+
       return [sign, delimiter, Number(number), fraction].join('');
     },
 
@@ -457,66 +463,82 @@ var masks = /*#__PURE__*/Object.freeze({
 
 function updater(el, masker) {
   const currentValue = el.value;
+  const oldValue = el.dataset.value;
+
+  if (oldValue === currentValue) {
+    return;
+  }
+
   const newValue = masker(currentValue, {
     el
   });
 
-  if (newValue !== currentValue) {
-    // Get current cursor position
-    let position = el.selectionEnd; // Find next cursor position
+  if (newValue === currentValue) {
+    el.dataset.value = currentValue;
+    return;
+  } // Get current cursor position
 
-    if (position === currentValue.length) {
-      position = newValue.length;
-    } else if (position > 0 && position <= newValue.length) {
-      const digit = currentValue.charAt(position - 1); // while(
-      //   position < newValue.length
-      //   && newValue.charAt(position - 1) !== digit
-      //   ) {
-      //   position++;
-      // }
 
-      if (digit !== newValue.charAt(position - 1)) {
-        if (digit === newValue.charAt(position)) {
-          position += 1;
-        } else if (digit === newValue.charAt(position - 2)) {
-          position -= 1;
-        }
+  let position = el.selectionEnd; // Find next cursor position
+
+  if (position === currentValue.length) {
+    position = newValue.length;
+  } else if (position > 0 && position <= newValue.length) {
+    const digit = currentValue.charAt(position - 1);
+
+    if (digit !== newValue.charAt(position - 1)) {
+      if (digit === newValue.charAt(position)) {
+        position += 1;
+      } else if (digit === newValue.charAt(position - 2)) {
+        position -= 1;
       }
     }
-
-    el.value = newValue;
-
-    if (el === document.activeElement) {
-      // Restore cursor position
-      el.setSelectionRange(position, position);
-    }
-
-    el.dispatchEvent(createEvent('input'));
   }
+
+  el.value = newValue;
+  el.dataset.value = newValue;
+
+  if (el === document.activeElement) {
+    // Restore cursor position
+    el.setSelectionRange(position, position);
+  }
+
+  el.dispatchEvent(createEvent('input'));
 }
 
 function make(maskerFn) {
-  let masker;
-  let inputEl;
+  const maskerMap = new WeakMap();
+  const inputMap = new WeakMap(); // const eventMap = new WeakMap();
+
   return {
     beforeMount(el, binding) {
-      masker = maskerFn({
+      const masker = maskerFn({
         value: binding.value,
         locale: binding.arg || Object.keys(binding.modifiers)[0] || null
       });
-      inputEl = getInputElement(el); // inputEl.oninput = ({ isTrusted, inputType = null }) => {
+      const inputEl = getInputElement(el); // const eventHandler = ({ isTrusted }) => {
       //   if (isTrusted) {
-      //     updater(el, masker);
+      //     updater(inputEl, masker);
       //   }
       // };
+
+      maskerMap.set(el, masker);
+      inputMap.set(el, inputEl); // eventMap.set(el, eventHandler);
+      // inputEl.addEventListener('input', eventHandler);
     },
 
-    mounted() {
-      updater(inputEl, masker);
+    mounted(el) {
+      updater(inputMap.get(el), maskerMap.get(el));
     },
 
-    updated() {
-      updater(inputEl, masker);
+    updated(el) {
+      updater(inputMap.get(el), maskerMap.get(el));
+    },
+
+    unmounted(el) {
+      // el.removeEventListener('input', inputMap.get(el));
+      maskerMap.delete(el);
+      inputMap.delete(el); // eventMap.delete(el);
     }
 
   };
