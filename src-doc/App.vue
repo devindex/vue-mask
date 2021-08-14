@@ -47,6 +47,20 @@
     </div>
 
     <div class="form-group">
+      <label class="form-label" for="hour">Hour</label>
+      <div class="input-group">
+        <input class="form-input" type="text" id="hour"
+               @blur="eventHandler"
+               v-model="mask.hour" v-mask-hour>
+        <button class="btn input-group-btn btn-action btn-primary" @click="setNow">
+          <i class="icon icon-refresh"></i>
+        </button>
+        <span class="input-group-addon">{{ mask.hour }}</span>
+      </div>
+      <input-code directive="v-mask-hour"></input-code>
+    </div>
+
+    <div class="form-group">
       <label class="form-label" for="decimal">Decimal</label>
       <div class="input-group">
         <input class="form-input" type="text" id="decimal"
@@ -121,6 +135,7 @@
 
 <script>
 import InputCode from './InputCode.vue';
+import { DateTime } from 'luxon';
 
 export default {
   components: {
@@ -135,12 +150,11 @@ export default {
     eventHandler(e) {
       // console.log('event', e.type);
     },
+    setNow() {
+      this.mask.hour = DateTime.now().toFormat('HHmm');
+    },
     setToday() {
-      this.mask.date = new Date().toISOString()
-        .substring(0, 10)
-        .split('-')
-        .reverse()
-        .join('-');
+      this.mask.date = DateTime.now().toFormat('ddMMyyyy');
     },
     clearValues() {
       this.mask = this.emptyData();
@@ -153,6 +167,7 @@ export default {
         generic: '527407f42b4fa278',
         generic2: '235959',
         date: '13082021',
+        hour: '2359',
         decimal: '987654321',
         number: '9876543210',
         phone: '41987654321',
@@ -167,6 +182,7 @@ export default {
         generic: '',
         generic2: '',
         date: '',
+        hour: '',
         decimal: '',
         number: '',
         phone: '',

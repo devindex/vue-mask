@@ -1,5 +1,6 @@
 export { default as mask } from './mask';
 export { default as maskDate } from './date';
+export { default as maskHour } from './hour';
 export { default as maskPhone } from './phone';
 export { default as maskDecimal } from './decimal';
 export { default as maskNumber } from './number';
