@@ -3,6 +3,7 @@ import VueHighlight from 'vue3-highlightjs';
 import VueMask from '../src/entry';
 import App from './App.vue';
 import 'spectre.css/src/spectre.scss';
+import 'spectre.css/src/spectre-icons.scss';
 
 const app = createApp(App);
 
