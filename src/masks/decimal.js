@@ -15,7 +15,7 @@ export default masker(({ locale, value }) => {
   if (precision) {
     patternParts.push(
       conf.decimal,
-      new Array(value).fill('0').join('')
+      new Array(precision).fill('0').join('')
     );
   }
 
@@ -29,7 +29,12 @@ export default masker(({ locale, value }) => {
 
       const sign = value.startsWith('-') ? '-' : '';
 
-      const [number, fraction = ''] = value.split(conf.decimal).map(filterNumbers);
+      let [number, fraction = ''] = value.split(conf.decimal).map(filterNumbers);
+
+      if (fraction && fraction.length > precision) {
+        number = `${number}${fraction.slice(0, -precision)}`;
+        fraction = fraction.slice(-precision);
+      }
 
       return [sign, delimiter, Number(number), fraction].join('');
     },
